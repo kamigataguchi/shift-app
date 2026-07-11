@@ -18,23 +18,21 @@ def load_staff():
         data = response.json()
         
         if not data or isinstance(data, dict) and "error" in data:
-            df = pd.DataFrame(columns=["名前", "運転可否", "希望休", "暗証番号"])
+            df = pd.DataFrame(columns=["名前", "表示名", "運転可否", "希望休", "暗証番号"])
         else:
             df = pd.DataFrame(data)
             
-        if "希望休" not in df.columns:
-            df["希望休"] = ""
-        if "暗証番号" not in df.columns:
-            df["暗証番号"] = "0000"
+        if "表示名" not in df.columns: df["表示名"] = df["名前"]
+        if "希望休" not in df.columns: df["希望休"] = ""
+        if "暗証番号" not in df.columns: df["暗証番号"] = "0000"
             
         df["希望休"] = df["希望休"].fillna("").astype(str).replace('nan', '')
-        df["暗証番号"] = df["暗証番号"].fillna("0000").astype(str).replace('nan', '0000')
-        df["暗証番号"] = df["暗証番号"].apply(lambda x: str(x).split('.')[0])
+        df["暗証番号"] = df["暗証番号"].fillna("0000").astype(str).replace('nan', '0000').apply(lambda x: str(x).split('.')[0])
         
         return df
     except Exception as e:
         st.error("データの読み込みに失敗しました。URLが正しいか確認してください。")
-        return pd.DataFrame(columns=["名前", "運転可否", "希望休", "暗証番号"])
+        return pd.DataFrame(columns=["名前", "表示名", "運転可否", "希望休", "暗証番号"])
 
 def save_staff(df):
     """API経由でスプレッドシートにスタッフデータを保存（上書き）する"""
@@ -56,9 +54,10 @@ st.markdown("---")
 if 'staff_data' not in st.session_state:
     st.session_state.staff_data = load_staff()
 
-staff_list = st.session_state.staff_data["名前"].dropna().tolist()
+# ★リストに出すのは「表示名（偽名・イニシャル等）」のみ
+staff_display_list = st.session_state.staff_data["表示名"].dropna().tolist()
 
-if not staff_list:
+if not staff_display_list:
     st.warning("現在、登録されているスタッフがいません。管理画面から登録してください。")
     st.stop()
 
@@ -71,18 +70,21 @@ if 'logged_in_staff' not in st.session_state:
 # ==========================================
 if st.session_state.logged_in_staff is None:
     st.subheader("🔑 ログイン")
-    st.write("あなたのお名前を選択し、暗証番号を入力してください。")
+    st.write("リストからあなたのアカウント名を選択し、暗証番号を入力してください。")
     
     with st.container(border=True):
-        selected_staff_name = st.selectbox("お名前", staff_list, help="リストから自分の名前を選択してください")
+        # ★選択させるのは「表示名」
+        selected_display_name = st.selectbox("アカウント名 (表示名)", staff_display_list)
         entered_pin = st.text_input("暗証番号", type="password", help="初期パスワードは 0000 です")
         
         if st.button("ログインする", type="primary", use_container_width=True):
-            staff_row = st.session_state.staff_data[st.session_state.staff_data["名前"] == selected_staff_name].iloc[0]
+            # 表示名から該当する行を探す
+            staff_row = st.session_state.staff_data[st.session_state.staff_data["表示名"] == selected_display_name].iloc[0]
             correct_pin = str(staff_row.get("暗証番号", "0000")).strip()
             
             if entered_pin.strip() == correct_pin:
-                st.session_state.logged_in_staff = selected_staff_name
+                # ログイン成功時は「本名」をセッションに保持しておく（裏側の処理用）
+                st.session_state.logged_in_staff = staff_row["名前"]
                 st.success("ログインしました！")
                 st.rerun()
             else:
@@ -92,13 +94,15 @@ if st.session_state.logged_in_staff is None:
 # ==========================================
 # メインの入力エリア (ログイン成功後)
 # ==========================================
+# 処理には本名とインデックスを使う
 selected_staff_name = st.session_state.logged_in_staff
 selected_staff_idx = st.session_state.staff_data[st.session_state.staff_data["名前"] == selected_staff_name].index[0]
+# 画面に表示するのは表示名
+display_name = st.session_state.staff_data.at[selected_staff_idx, "表示名"]
 
-# ログアウトボタンとユーザー表示を横に並べる
 col_user, col_logout = st.columns([3, 1])
 with col_user:
-    st.write(f"👤 **{selected_staff_name}** さん、お疲れ様です。")
+    st.write(f"👤 **{display_name}** さん、お疲れ様です。")
 with col_logout:
     if st.button("ログアウト", use_container_width=True):
         st.session_state.logged_in_staff = None
@@ -200,5 +204,5 @@ st.subheader("3. 最後に送信ボタンを押す")
 if st.button("📤 希望休を確定して送信する", type="primary", use_container_width=True):
     with st.spinner('データベース(スプレッドシート)へ保存中...'):
         save_staff(st.session_state.staff_data)
-        st.success(f"✅ {selected_staff_name} さんの希望休を送信しました！お疲れ様でした。")
+        st.success(f"✅ {display_name} さんの希望休を送信しました！お疲れ様でした。")
         st.balloons()
