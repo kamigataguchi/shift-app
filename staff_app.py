@@ -9,7 +9,7 @@ import json
 # データベース (Google Apps Script API) の設定
 # ==========================================
 # ★ここに先ほどコピーしたウェブアプリのURLを貼り付けてください★
-API_URL = "https://docs.google.com/spreadsheets/d/1Znp7UMU0FM-I4ekq5rN34w_c0IFI10438xxXjWSE5IU/edit?gid=345720078#gid=345720078"
+API_URL = "https://script.google.com/macros/s/AKfycbyAxc9_7fBomIZz49IGI2kwCVokqHTZ2DtNt8HVeTR2SHbJwt2jszDdYLPAPltxfYLn/exec"
 
 def load_staff():
     """API経由でスプレッドシートからスタッフデータを読み込む"""
