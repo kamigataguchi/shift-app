@@ -1,4 +1,4 @@
 streamlit
 pandas
 requests
-ortools
+ortools==9.8.3296
