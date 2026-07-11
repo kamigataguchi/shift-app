@@ -9,7 +9,7 @@ import json
 # データベース (Google Apps Script API) の設定
 # ==========================================
 # ★ここに先ほどコピーしたウェブアプリのURLを貼り付けてください★
-API_URL = "https://script.google.com/macros/s/AKfycbyAxc9_7fBomIZz49IGI2kwCVokqHTZ2DtNt8HVeTR2SHbJwt2jszDdYLPAPltxfYLn/exec"
+API_URL = "https://docs.google.com/spreadsheets/d/1Znp7UMU0FM-I4ekq5rN34w_c0IFI10438xxXjWSE5IU/edit?gid=345720078#gid=345720078"
 
 def load_staff():
     """API経由でスプレッドシートからスタッフデータを読み込む"""
@@ -46,6 +46,16 @@ def save_staff(df):
 # 画面UIの設定
 # ==========================================
 st.set_page_config(page_title="希望休 入力フォーム", page_icon="📅", layout="centered")
+
+# --- 余計なメニューやアイコンを消すCSS ---
+hide_streamlit_style = """
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 st.title("📅 希望休 入力フォーム")
 st.markdown("---")
