@@ -151,31 +151,43 @@ with col_m:
 st.markdown("<br>", unsafe_allow_html=True)
 
 st.subheader("2. 休みたい日をチェック")
-st.info(f"💡 {target_month}月の希望休にチェックを入れてください。")
+st.info(f"💡 {target_month}月の希望休を選んでください。ボタンをタップするたびに「🔴全休」→「🟡半休」→「取消」と切り替わります。")
 
 first_weekday, num_days = calendar.monthrange(target_year, target_month)
 
-def toggle_leave(staff_idx, day, widget_key):
-    is_active = st.session_state[widget_key]
+def toggle_leave(staff_idx, day):
     existing_req = str(st.session_state.staff_data.at[staff_idx, "希望休"])
-    days = []
+    req_dict = {}
     if existing_req and existing_req != "nan":
-        req_str = existing_req.translate(str.maketrans('０１２３４５６７８９，、', '0123456789,,'))
-        days = [int(x.strip()) for x in req_str.split(",") if x.strip().isdigit()]
-    
-    if is_active and day not in days:
-        days.append(day)
-    elif not is_active and day in days:
-        days.remove(day)
+        for item in existing_req.split(","):
+            item = item.strip()
+            if item:
+                num = ''.join(filter(str.isdigit, item))
+                typ = '半' if '半' in item else '全'
+                if num: req_dict[int(num)] = typ
+                
+    current_state = req_dict.get(day)
+    if current_state is None:
+        req_dict[day] = '全'
+    elif current_state == '全':
+        req_dict[day] = '半'
+    else:
+        del req_dict[day]
         
-    days.sort()
-    st.session_state.staff_data.at[staff_idx, "希望休"] = ",".join(map(str, days))
+    new_reqs = []
+    for d in sorted(req_dict.keys()):
+        new_reqs.append(f"{d}{req_dict[d]}")
+    st.session_state.staff_data.at[staff_idx, "希望休"] = ",".join(new_reqs)
 
 existing_req = str(st.session_state.staff_data.at[selected_staff_idx, "希望休"])
-selected_days = []
+req_dict = {}
 if existing_req and existing_req != "nan":
-    req_str = existing_req.translate(str.maketrans('０１２３４５６７８９，、', '0123456789,,'))
-    selected_days = [int(x.strip()) for x in req_str.split(",") if x.strip().isdigit()]
+    for item in existing_req.split(","):
+        item = item.strip()
+        if item:
+            num = ''.join(filter(str.isdigit, item))
+            typ = '半' if '半' in item else '全'
+            if num: req_dict[int(num)] = typ
 
 st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
 weekdays = ["月", "火", "水", "木", "金", "土", "日"]
@@ -197,9 +209,15 @@ for week in range(6):
         elif day_counter > num_days:
             cal_cols[i].write("") 
         else:
-            is_checked = day_counter in selected_days
-            w_key = f"staff_cal_{selected_staff_idx}_{target_year}_{target_month}_{day_counter}"
-            cal_cols[i].checkbox(f"{day_counter}", value=is_checked, key=w_key, on_change=toggle_leave, args=(selected_staff_idx, day_counter, w_key))
+            current_state = req_dict.get(day_counter)
+            if current_state == '全':
+                btn_label = f"🔴{day_counter}(全)"
+            elif current_state == '半':
+                btn_label = f"🟡{day_counter}(半)"
+            else:
+                btn_label = f"{day_counter}"
+                
+            cal_cols[i].button(btn_label, key=f"btn_{day_counter}", on_click=toggle_leave, args=(selected_staff_idx, day_counter), use_container_width=True)
             day_counter += 1
     st.markdown("<hr style='margin: 5px 0; border: none; border-bottom: 1px dashed #eee;'>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
