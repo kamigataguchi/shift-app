@@ -148,6 +148,11 @@ with col_y:
 with col_m:
     target_month = st.number_input("月", min_value=1, max_value=12, value=default_m)
 
+# --- 追加: 対象月の希望休列を決定・作成 ---
+req_col = f"希望休_{target_year}_{target_month:02d}"
+if req_col not in st.session_state.staff_data.columns:
+    st.session_state.staff_data[req_col] = ""
+
 st.markdown("<br>", unsafe_allow_html=True)
 
 st.subheader("2. 休みたい日をチェック")
@@ -155,8 +160,8 @@ st.info(f"💡 {target_month}月の希望休を選んでください。ボタン
 
 first_weekday, num_days = calendar.monthrange(target_year, target_month)
 
-def toggle_leave(staff_idx, day):
-    existing_req = str(st.session_state.staff_data.at[staff_idx, "希望休"])
+def toggle_leave(staff_idx, day, req_col):
+    existing_req = str(st.session_state.staff_data.at[staff_idx, req_col])
     req_dict = {}
     if existing_req and existing_req != "nan":
         for item in existing_req.split(","):
@@ -177,9 +182,9 @@ def toggle_leave(staff_idx, day):
     new_reqs = []
     for d in sorted(req_dict.keys()):
         new_reqs.append(f"{d}{req_dict[d]}")
-    st.session_state.staff_data.at[staff_idx, "希望休"] = ",".join(new_reqs)
+    st.session_state.staff_data.at[staff_idx, req_col] = ",".join(new_reqs)
 
-existing_req = str(st.session_state.staff_data.at[selected_staff_idx, "希望休"])
+existing_req = str(st.session_state.staff_data.at[selected_staff_idx, req_col])
 req_dict = {}
 if existing_req and existing_req != "nan":
     for item in existing_req.split(","):
@@ -217,7 +222,7 @@ for week in range(6):
             else:
                 btn_label = f"{day_counter}"
                 
-            cal_cols[i].button(btn_label, key=f"btn_{day_counter}", on_click=toggle_leave, args=(selected_staff_idx, day_counter), use_container_width=True)
+            cal_cols[i].button(btn_label, key=f"btn_{day_counter}", on_click=toggle_leave, args=(selected_staff_idx, day_counter, req_col), use_container_width=True)
             day_counter += 1
     st.markdown("<hr style='margin: 5px 0; border: none; border-bottom: 1px dashed #eee;'>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
