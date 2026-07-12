@@ -18,13 +18,15 @@ def load_staff():
         data = response.json()
         
         if not data or isinstance(data, dict) and "error" in data:
-            df = pd.DataFrame(columns=["名前", "表示名", "運転可否", "希望休", "暗証番号"])
+            df = pd.DataFrame(columns=["名前", "表示名", "運転可否", "希望休", "暗証番号", "雇用形態", "基本勤務"])
         else:
             df = pd.DataFrame(data)
             
         if "表示名" not in df.columns: df["表示名"] = df["名前"]
         if "希望休" not in df.columns: df["希望休"] = ""
         if "暗証番号" not in df.columns: df["暗証番号"] = "0000"
+        if "雇用形態" not in df.columns: df["雇用形態"] = "常勤"
+        if "基本勤務" not in df.columns: df["基本勤務"] = "通常"
             
         df["希望休"] = df["希望休"].fillna("").astype(str).replace('nan', '')
         df["暗証番号"] = df["暗証番号"].fillna("0000").astype(str).replace('nan', '0000').apply(lambda x: str(x).split('.')[0])
@@ -47,52 +49,15 @@ def save_staff(df):
 # ==========================================
 st.set_page_config(page_title="希望休 入力フォーム", layout="centered")
 
-# --- モダンWebデザイン(CSS) & 余計なメニュー非表示 ---
-modern_css = """
+# --- 最小限のCSS (余計なメニュー非表示のみ。色はシステムに任せる) ---
+hide_menu_css = """
 <style>
-    /* メニュー非表示 */
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
-    
-    /* 全体のフォントと背景色 */
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans JP', sans-serif;
-    }
-    .stApp {
-        background-color: #f8fafc;
-    }
-    /* カレンダー等のカード化 */
-    .modern-card {
-        background-color: #ffffff;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e2e8f0;
-    }
-    /* ボタンのスタイル */
-    .stButton > button {
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        border: 1px solid #e2e8f0;
-    }
-    .stButton > button:hover {
-        border-color: #cbd5e1;
-    }
-    /* プライマリボタン */
-    .stButton > button[kind="primary"] {
-        background-color: #2563eb;
-        color: white;
-        border: none;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background-color: #1d4ed8;
-    }
 </style>
 """
-st.markdown(modern_css, unsafe_allow_html=True)
+st.markdown(hide_menu_css, unsafe_allow_html=True)
 
 st.title("希望休 入力フォーム")
 st.markdown("---")
@@ -101,14 +66,12 @@ st.markdown("---")
 if 'staff_data' not in st.session_state:
     st.session_state.staff_data = load_staff()
 
-# ★リストに出すのは「表示名（偽名・イニシャル等）」のみ
 staff_display_list = st.session_state.staff_data["表示名"].dropna().tolist()
 
 if not staff_display_list:
     st.warning("現在、登録されているスタッフがいません。管理画面から登録してください。")
     st.stop()
 
-# ログイン状態の管理
 if 'logged_in_staff' not in st.session_state:
     st.session_state.logged_in_staff = None
 
@@ -150,7 +113,6 @@ with col_logout:
         st.session_state.logged_in_staff = None
         st.rerun()
 
-# --- 暗証番号変更機能 ---
 with st.expander("暗証番号の変更はこちら"):
     st.write("セキュリティのため、初期パスワード(0000)から自分専用の番号に変更してください。")
     new_pin = st.text_input("新しい暗証番号", type="password")
@@ -168,7 +130,6 @@ with st.expander("暗証番号の変更はこちら"):
 st.markdown("<br>", unsafe_allow_html=True)
 st.write("来月のシフトの希望休を入力してください。")
 
-# 対象月を選ぶ
 st.subheader("1. 対象の年月を確認")
 now = datetime.now()
 default_y = now.year + 1 if now.month == 12 else now.year
@@ -225,15 +186,13 @@ if existing_req and existing_req != "nan":
             typ = '半' if '半' in item else '全'
             if num: req_dict[int(num)] = typ
 
-# カレンダー部分にモダンカードのCSSクラスを適用
-st.markdown("<div class='modern-card'>", unsafe_allow_html=True)
 weekdays = ["月", "火", "水", "木", "金", "土", "日"]
 header_cols = st.columns(7)
 for i, w in enumerate(weekdays):
-    color = "#ef4444" if i == 6 else "#3b82f6" if i == 5 else "#475569"
-    header_cols[i].markdown(f"<div style='text-align: center; color: {color}; font-weight: 500; font-size: 14px;'>{w}</div>", unsafe_allow_html=True)
+    color = "#ef4444" if i == 6 else "#3b82f6" if i == 5 else "#888888"
+    header_cols[i].markdown(f"<div style='text-align: center; color: {color}; font-weight: bold;'>{w}</div>", unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 12px 0;'>", unsafe_allow_html=True)
 
 day_counter = 1
 for week in range(6):
@@ -249,21 +208,20 @@ for week in range(6):
             current_state = req_dict.get(day_counter)
             if current_state == '全':
                 btn_label = f"{day_counter} (全休)"
+                btn_type = "primary"
             elif current_state == '半':
                 btn_label = f"{day_counter} (半休)"
+                btn_type = "primary"
             else:
                 btn_label = f"{day_counter}"
+                btn_type = "secondary"
                 
-            cal_cols[i].button(btn_label, key=f"btn_{day_counter}", on_click=toggle_leave, args=(selected_staff_idx, day_counter, req_col), use_container_width=True)
+            cal_cols[i].button(btn_label, key=f"btn_{day_counter}", type=btn_type, on_click=toggle_leave, args=(selected_staff_idx, day_counter, req_col), use_container_width=True)
             day_counter += 1
-    st.markdown("<hr style='margin: 8px 0; border: none; border-bottom: 1px dashed #e2e8f0;'>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ==========================================
-# 保存ボタン
-# ==========================================
 st.subheader("3. データの送信")
 
 if st.button("希望休を確定して送信する", type="primary", use_container_width=True):
