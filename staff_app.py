@@ -45,19 +45,56 @@ def save_staff(df):
 # ==========================================
 # 画面UIの設定
 # ==========================================
-st.set_page_config(page_title="希望休 入力フォーム", page_icon="📅", layout="centered")
+st.set_page_config(page_title="希望休 入力フォーム", layout="centered")
 
-# --- 余計なメニューやアイコンを消すCSS ---
-hide_streamlit_style = """
+# --- モダンWebデザイン(CSS) & 余計なメニュー非表示 ---
+modern_css = """
 <style>
-#MainMenu {visibility: hidden;}
-header {visibility: hidden;}
-footer {visibility: hidden;}
+    /* メニュー非表示 */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* 全体のフォントと背景色 */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+    html, body, [class*="css"] {
+        font-family: 'Noto Sans JP', sans-serif;
+    }
+    .stApp {
+        background-color: #f8fafc;
+    }
+    /* カレンダー等のカード化 */
+    .modern-card {
+        background-color: #ffffff;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+    }
+    /* ボタンのスタイル */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: 1px solid #e2e8f0;
+    }
+    .stButton > button:hover {
+        border-color: #cbd5e1;
+    }
+    /* プライマリボタン */
+    .stButton > button[kind="primary"] {
+        background-color: #2563eb;
+        color: white;
+        border: none;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #1d4ed8;
+    }
 </style>
 """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(modern_css, unsafe_allow_html=True)
 
-st.title("📅 希望休 入力フォーム")
+st.title("希望休 入力フォーム")
 st.markdown("---")
 
 # --- データの読み込み ---
@@ -79,47 +116,42 @@ if 'logged_in_staff' not in st.session_state:
 # ログイン画面
 # ==========================================
 if st.session_state.logged_in_staff is None:
-    st.subheader("🔑 ログイン")
-    st.write("リストからあなたのアカウント名を選択し、暗証番号を入力してください。")
+    st.subheader("ログイン")
+    st.write("リストからアカウント名を選択し、暗証番号を入力してください。")
     
     with st.container(border=True):
-        # ★選択させるのは「表示名」
         selected_display_name = st.selectbox("アカウント名 (表示名)", staff_display_list)
         entered_pin = st.text_input("暗証番号", type="password", help="初期パスワードは 0000 です")
         
         if st.button("ログインする", type="primary", use_container_width=True):
-            # 表示名から該当する行を探す
             staff_row = st.session_state.staff_data[st.session_state.staff_data["表示名"] == selected_display_name].iloc[0]
             correct_pin = str(staff_row.get("暗証番号", "0000")).strip()
             
             if entered_pin.strip() == correct_pin:
-                # ログイン成功時は「本名」をセッションに保持しておく（裏側の処理用）
                 st.session_state.logged_in_staff = staff_row["名前"]
-                st.success("ログインしました！")
+                st.success("ログインしました。")
                 st.rerun()
             else:
-                st.error("❌ 暗証番号が違います。")
+                st.error("暗証番号が違います。")
     st.stop()
 
 # ==========================================
 # メインの入力エリア (ログイン成功後)
 # ==========================================
-# 処理には本名とインデックスを使う
 selected_staff_name = st.session_state.logged_in_staff
 selected_staff_idx = st.session_state.staff_data[st.session_state.staff_data["名前"] == selected_staff_name].index[0]
-# 画面に表示するのは表示名
 display_name = st.session_state.staff_data.at[selected_staff_idx, "表示名"]
 
 col_user, col_logout = st.columns([3, 1])
 with col_user:
-    st.write(f"👤 **{display_name}** さん、お疲れ様です。")
+    st.write(f"**{display_name}** さん、お疲れ様です。")
 with col_logout:
     if st.button("ログアウト", use_container_width=True):
         st.session_state.logged_in_staff = None
         st.rerun()
 
 # --- 暗証番号変更機能 ---
-with st.expander("🔑 暗証番号の変更はこちら"):
+with st.expander("暗証番号の変更はこちら"):
     st.write("セキュリティのため、初期パスワード(0000)から自分専用の番号に変更してください。")
     new_pin = st.text_input("新しい暗証番号", type="password")
     new_pin_confirm = st.text_input("新しい暗証番号 (確認用)", type="password")
@@ -127,11 +159,11 @@ with st.expander("🔑 暗証番号の変更はこちら"):
         if new_pin and new_pin == new_pin_confirm:
             st.session_state.staff_data.at[selected_staff_idx, "暗証番号"] = str(new_pin)
             save_staff(st.session_state.staff_data)
-            st.success("✅ 暗証番号を変更しました！次回から新しい番号をご利用ください。")
+            st.success("暗証番号を変更しました。次回から新しい番号をご利用ください。")
         elif new_pin != new_pin_confirm:
-            st.error("❌ 確認用の番号が一致しません。")
+            st.error("確認用の番号が一致しません。")
         else:
-            st.warning("⚠️ 新しい暗証番号を入力してください。")
+            st.warning("新しい暗証番号を入力してください。")
 
 st.markdown("<br>", unsafe_allow_html=True)
 st.write("来月のシフトの希望休を入力してください。")
@@ -148,15 +180,14 @@ with col_y:
 with col_m:
     target_month = st.number_input("月", min_value=1, max_value=12, value=default_m)
 
-# --- 追加: 対象月の希望休列を決定・作成 ---
 req_col = f"希望休_{target_year}_{target_month:02d}"
 if req_col not in st.session_state.staff_data.columns:
     st.session_state.staff_data[req_col] = ""
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-st.subheader("2. 休みたい日をチェック")
-st.info(f"💡 {target_month}月の希望休を選んでください。ボタンをタップするたびに「🔴全休」→「🟡半休」→「取消」と切り替わります。")
+st.subheader("2. 休みたい日を選択")
+st.info(f"{target_month}月の希望休を選んでください。ボタンをタップするたびに「全休」→「半休」→「取消」と切り替わります。")
 
 first_weekday, num_days = calendar.monthrange(target_year, target_month)
 
@@ -194,14 +225,15 @@ if existing_req and existing_req != "nan":
             typ = '半' if '半' in item else '全'
             if num: req_dict[int(num)] = typ
 
-st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+# カレンダー部分にモダンカードのCSSクラスを適用
+st.markdown("<div class='modern-card'>", unsafe_allow_html=True)
 weekdays = ["月", "火", "水", "木", "金", "土", "日"]
 header_cols = st.columns(7)
 for i, w in enumerate(weekdays):
-    color = "red" if i == 6 else "blue" if i == 5 else "black"
-    header_cols[i].markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-size: 14px;'>{w}</div>", unsafe_allow_html=True)
+    color = "#ef4444" if i == 6 else "#3b82f6" if i == 5 else "#475569"
+    header_cols[i].markdown(f"<div style='text-align: center; color: {color}; font-weight: 500; font-size: 14px;'>{w}</div>", unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
 
 day_counter = 1
 for week in range(6):
@@ -216,15 +248,15 @@ for week in range(6):
         else:
             current_state = req_dict.get(day_counter)
             if current_state == '全':
-                btn_label = f"🔴{day_counter}(全)"
+                btn_label = f"{day_counter} (全休)"
             elif current_state == '半':
-                btn_label = f"🟡{day_counter}(半)"
+                btn_label = f"{day_counter} (半休)"
             else:
                 btn_label = f"{day_counter}"
                 
             cal_cols[i].button(btn_label, key=f"btn_{day_counter}", on_click=toggle_leave, args=(selected_staff_idx, day_counter, req_col), use_container_width=True)
             day_counter += 1
-    st.markdown("<hr style='margin: 5px 0; border: none; border-bottom: 1px dashed #eee;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 8px 0; border: none; border-bottom: 1px dashed #e2e8f0;'>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -232,10 +264,9 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==========================================
 # 保存ボタン
 # ==========================================
-st.subheader("3. 最後に送信ボタンを押す")
+st.subheader("3. データの送信")
 
-if st.button("📤 希望休を確定して送信する", type="primary", use_container_width=True):
-    with st.spinner('データベース(スプレッドシート)へ保存中...'):
+if st.button("希望休を確定して送信する", type="primary", use_container_width=True):
+    with st.spinner('データを保存しています...'):
         save_staff(st.session_state.staff_data)
-        st.success(f"✅ {display_name} さんの希望休を送信しました！お疲れ様でした。")
-        st.balloons()
+        st.success(f"{display_name} さんの希望休を送信しました。")
