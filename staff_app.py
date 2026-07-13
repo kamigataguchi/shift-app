@@ -7,7 +7,7 @@ import requests
 # ==========================================
 # データベース (Google Apps Script API) の設定
 # ==========================================
-API_URL = "https://shift-app-l4al6dez6gehirrv7y9dc3.streamlit.app/"
+API_URL = "https://script.google.com/macros/s/AKfycbyAxc9_7fBomIZz49IGI2kwCVokqHTZ2DtNt8HVeTR2SHbJwt2jszDdYLPAPltxfYLn/exec"
 
 def api_request(sheet_name, method="GET", data=None):
     try:
